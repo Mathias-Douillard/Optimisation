@@ -1,17 +1,20 @@
-"""
-TP SVM – Exercice 1
-Solving the SVM primal and dual problems with gradient-based algorithms.
-"""
-import sys
-import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn import datasets
 from utilities import project_onto_C
+
+import sys
+import os
+
+"""
+TP SVM – Exercice 1
+Solving the SVM primal and dual problems with gradient-based algorithms.
+"""
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 
 # =============================================================================
 # Load data
@@ -32,8 +35,10 @@ df = pd.concat([
 # Helper: standardise features (zero mean, unit variance)
 # Returns (X_scaled, mean, scale) so the solution can be back-transformed.
 # =============================================================================
+
+
 def standardise(X):
-    mu    = X.mean(axis=0)
+    mu = X.mean(axis=0)
     sigma = X.std(axis=0)
     sigma[sigma == 0] = 1.0
     return (X - mu) / sigma, mu, sigma
@@ -126,7 +131,7 @@ def obj_func_primal(w, b, X, y, rho):
 def _primal_subgrad(w, b, X, y, rho):
     """Sub-gradient of the primal objective at (w, b)."""
     margin = y * (X @ w + b)          # shape (n,)
-    mask   = margin < 1.0              # ReLU is not at flat region
+    mask = margin < 1.0              # ReLU is not at flat region
     # ∇_w f = w − rho * Σ_{mask} y_i x_i
     grad_w = w - rho * (y[mask, None] * X[mask]).sum(axis=0)
     # ∇_b f = −rho * Σ_{mask} y_i
@@ -186,7 +191,7 @@ def solve_primal(X, y, rho, stepsize_mode, n_iter=3000):
             gamma = c2 / (1.0 + c3 * k)
         elif stepsize_mode == 'normalized':
             norm_g = np.sqrt(np.dot(gw, gw) + gb**2)
-            gamma  = c4 / norm_g if norm_g > 1e-12 else 0.0
+            gamma = c4 / norm_g if norm_g > 1e-12 else 0.0
         else:
             raise ValueError(f"Unknown stepsize_mode: '{stepsize_mode}'")
 
@@ -232,6 +237,8 @@ print(f"[Primal] w* ≈ {w_star_p}")
 print(f"[Primal] b* ≈ {b_star_p:.4f}")
 
 # 3.4  Separating hyperplane
+
+
 def plot_boundary(ax, w, b, x_range, **kwargs):
     """Plot w[0]*x + w[1]*y + b = 0  as a line on a 2-D scatter."""
     x0, x1 = x_range
@@ -241,6 +248,7 @@ def plot_boundary(ax, w, b, x_range, **kwargs):
         ax.plot(xs, ys, **kwargs)
     else:
         ax.axvline(x=-b / w[0], **kwargs)
+
 
 fig, ax = plt.subplots(figsize=(8, 5))
 sns.scatterplot(data=df, x="mean radius", y="mean texture",
@@ -268,7 +276,7 @@ print("\n[Primal – D=31 features]")
 X_full_s, mu_f, sig_f = standardise(X_full)
 for mode in ('constant', 'variable', 'normalized'):
     w_s, b_s, _ = solve_primal(X_full_s, y, rho, stepsize_mode=mode)
-    w_f, b_f    = backproject_w(w_s, b_s, mu_f, sig_f)
+    w_f, b_f = backproject_w(w_s, b_s, mu_f, sig_f)
     mc = np.mean(np.sign(X_full @ w_f + b_f) != y)
     print(f"  {mode:10s}  misclassification = {mc:.4f}")
 
@@ -296,7 +304,7 @@ def obj_func_dual(lam, X, y, rho):
     float
     """
     yx = y[:, None] * X          # (n, D)
-    v  = yx.T @ lam              # (D,)
+    v = yx.T @ lam              # (D,)
     return lam.sum() - 0.5 * np.dot(v, v)
 
 
@@ -331,7 +339,7 @@ def solve_dual(X, y, rho, stepsize_mode, n_iter=3000):
     """
     n = len(y)
     sigma_max = np.linalg.svd(X, compute_uv=False)[0]
-    L  = sigma_max**2           # Lipschitz constant of ∇g  (σ_max(K))
+    L = sigma_max**2           # Lipschitz constant of ∇g  (σ_max(K))
 
     c1 = 1.0 / L
     c2 = 1.0 / L
@@ -351,7 +359,7 @@ def solve_dual(X, y, rho, stepsize_mode, n_iter=3000):
             gamma = c2 / (1.0 + c3 * k)
         elif stepsize_mode == 'normalized':
             norm_g = np.linalg.norm(grad)
-            gamma  = c4 / norm_g if norm_g > 1e-12 else 0.0
+            gamma = c4 / norm_g if norm_g > 1e-12 else 0.0
         else:
             raise ValueError(f"Unknown stepsize_mode: '{stepsize_mode}'")
 
@@ -385,11 +393,11 @@ def dual2primal(lam_opt, X, y, rho):
     tol = 1e-5 * rho
     sv_inner = (lam_opt > tol) & (lam_opt < rho - tol)   # strict support vectors
     if sv_inner.any():
-        idxs  = np.where(sv_inner)[0]
+        idxs = np.where(sv_inner)[0]
         b_opt = float(np.mean(y[idxs] - X[idxs] @ w_opt))
     else:
         sv_any = lam_opt > tol
-        b_opt  = float(np.mean(y[sv_any] - X[sv_any] @ w_opt)) if sv_any.any() else 0.0
+        b_opt = float(np.mean(y[sv_any] - X[sv_any] @ w_opt)) if sv_any.any() else 0.0
 
     return w_opt, b_opt
 
@@ -397,8 +405,8 @@ def dual2primal(lam_opt, X, y, rho):
 results_dual = {}
 for mode in ('constant', 'variable', 'normalized'):
     lam_opt, obj_vals = solve_dual(X_s, y, rho, stepsize_mode=mode)
-    w_d_s, b_d_s      = dual2primal(lam_opt, X_s, y, rho)
-    w_d, b_d          = backproject_w(w_d_s, b_d_s, mu_s, sig_s)
+    w_d_s, b_d_s = dual2primal(lam_opt, X_s, y, rho)
+    w_d, b_d = backproject_w(w_d_s, b_d_s, mu_s, sig_s)
     mc = np.mean(np.sign(X @ w_d + b_d) != y)
     results_dual[mode] = (lam_opt, w_d, b_d, obj_vals)
     print(f"[Dual   – {mode:10s}]  g* ≈ {obj_vals[-1]:.4f} | misclf = {mc:.4f}")
@@ -449,8 +457,8 @@ lb = max(results_dual[m][3][-1] for m in results_dual)
 print(f"\n[Dual] Lower bound for the primal: g(λ*) ≈ {lb:.4f}")
 
 # 4.3 (Bonus)  Support vectors
-tol_sv  = 1e-4
-sv_idx  = np.where(lam_star > tol_sv)[0]
+tol_sv = 1e-4
+sv_idx = np.where(lam_star > tol_sv)[0]
 print(f"[Dual] Number of support vectors (λ > 0): {len(sv_idx)} / {len(y)}")
 
 fig, ax = plt.subplots(figsize=(8, 5))
@@ -501,13 +509,13 @@ def solve_dual_smo(X, y, rho, n_iter=20000):
     lam_opt    : np.ndarray (n,)
     obj_values : list[float]
     """
-    n  = len(y)
+    n = len(y)
     yx = y[:, None] * X              # (n, D)  rows = y_i * x_i
-    K  = yx @ yx.T                   # (n, n)  kernel matrix
+    K = yx @ yx.T                   # (n, n)  kernel matrix
 
-    lam        = np.zeros(n)         # feasible start
+    lam = np.zeros(n)         # feasible start
     obj_values = []
-    rng        = np.random.default_rng(42)
+    rng = np.random.default_rng(42)
 
     for _ in range(n_iter):
         obj_values.append(lam.sum() - 0.5 * lam @ K @ lam)
@@ -516,7 +524,7 @@ def solve_dual_smo(X, y, rho, n_iter=20000):
         i, j = rng.choice(n, size=2, replace=False)
 
         # Conserved quantity: y_i λ_i + y_j λ_j = s
-        s   = y[i] * lam[i] + y[j] * lam[j]
+        s = y[i] * lam[i] + y[j] * lam[j]
         eta = y[i] * y[j]            # ±1
 
         # Coefficient of λ_i² in the restricted dual (concave quadratic)
@@ -526,7 +534,7 @@ def solve_dual_smo(X, y, rho, n_iter=20000):
 
         # Linear coefficient (derivative at λ_i)
         Klam = K @ lam
-        B    = (1.0 - Klam[i]) - eta * (1.0 - Klam[j])
+        B = (1.0 - Klam[i]) - eta * (1.0 - Klam[j])
 
         # Unconstrained maximiser
         li_star = lam[i] - B / A
@@ -543,10 +551,10 @@ def solve_dual_smo(X, y, rho, n_iter=20000):
         if lo > hi + 1e-12:
             continue
 
-        li_new  = float(np.clip(li_star, lo, hi))
-        lj_new  = y[j] * (s - y[i] * li_new)
-        lam[i]  = li_new
-        lam[j]  = lj_new
+        li_new = float(np.clip(li_star, lo, hi))
+        lj_new = y[j] * (s - y[i] * li_new)
+        lam[i] = li_new
+        lam[j] = lj_new
 
     obj_values.append(lam.sum() - 0.5 * lam @ K @ lam)
     return lam, obj_values
@@ -555,7 +563,7 @@ def solve_dual_smo(X, y, rho, n_iter=20000):
 print("\n[SMO] Running SMO algorithm …")
 lam_smo, obj_smo = solve_dual_smo(X_s, y, rho)
 w_smo_s, b_smo_s = dual2primal(lam_smo, X_s, y, rho)
-w_smo, b_smo     = backproject_w(w_smo_s, b_smo_s, mu_s, sig_s)
+w_smo, b_smo = backproject_w(w_smo_s, b_smo_s, mu_s, sig_s)
 
 preds_smo = np.sign(X @ w_smo + b_smo)
 preds_smo[preds_smo == 0] = 1
